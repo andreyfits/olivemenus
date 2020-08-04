@@ -144,7 +144,7 @@ class OlivemenusService extends Component
             $localHTML = '<div' . $menu_id . ' class="menu' . $menu_class . '">' . $localHTML . '</div>';
         }
 
-        echo $localHTML;
+        return $localHTML;
     }
 
     private function getMenuItemHTML($menu_item, $config) {
