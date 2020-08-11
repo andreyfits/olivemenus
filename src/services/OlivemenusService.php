@@ -38,8 +38,8 @@ class OlivemenusService extends Component
 
     public function getAllMenus($siteId) {
         return OlivemenusRecord::find()
-                    ->where(['site_id' => $siteId])
-                    ->all();
+            ->where(['site_id' => $siteId])
+            ->all();
     }
 
     public function getMenuById($id) {
@@ -99,7 +99,9 @@ class OlivemenusService extends Component
 
     // Front-end Methods
     // =========================================================================
-    public function getMenuHTML($handle = false, $config ) {
+
+    public function getMenuHTML($handle = false, $config )
+    {
         if ($handle === false || ($menu = $this->getMenuByHandle($handle)) === null) {
             echo '<p>' . Craft::t('olivemenus', 'A menu with this handle does not exist!') . '</p>';
             return;
@@ -181,8 +183,8 @@ class OlivemenusService extends Component
             if (!empty($entry) ) $menu_item_url = $entry->url;
             else {
                 $entry = Category::find()
-                ->id($menu_item['entry_id'])
-                ->one();
+                    ->id($menu_item['entry_id'])
+                    ->one();
 
                 if (!empty($entry) ) $menu_item_url = $entry->url;
             }
@@ -227,15 +229,91 @@ class OlivemenusService extends Component
             }
 
             $localHTML .= '<ul class="'.$ul_class.'">';
-                foreach ( $menu_item['children'] as $child )
-                {
-                   $localHTML .= $this->getMenuItemHTML($child, $config);
-                }
+            foreach ( $menu_item['children'] as $child )
+            {
+                $localHTML .= $this->getMenuItemHTML($child, $config);
+            }
             $localHTML .= '</ul>';
         }
         $localHTML .= '</li>';
 
         return $localHTML;
+    }
+
+// -====================================================================================================================================
+
+    public function getMenuArray($handle = false)
+    {
+        if ($handle === false || ($menu = $this->getMenuByHandle($handle)) === null) {
+            return null;
+        }
+
+        $result = [];
+
+        $menuEntries = Olivemenus::$plugin->olivemenuItems->getMenuItems($menu->id);
+        foreach ($menuEntries as $menuEntry) {
+            $result[] = $this->prepareMenuItem($menuEntry);
+        }
+
+        return $result;
+    }
+
+    private function prepareMenuItem($menuEntry)
+    {
+        $menuItemUrl = $this->getMenuItemUrl($menuEntry['custom_url'], $menuEntry['entry_id']);
+        $dataAttributesString = ' ';
+        $dataJson = $menuEntry['data_json'];
+        if ($dataJson) {
+            $dataJson = explode(PHP_EOL, $dataJson);
+            foreach ($dataJson as $dataItem) {
+                $dataItem = explode(':', $dataItem);
+                $dataAttributesString .= trim($dataItem[0]) . '="' .trim($dataItem[1]). '"';
+            }
+        }
+
+        $result = [
+            'id' => $menuEntry['id'],
+            'menuId' => $menuEntry['menu_id'],
+            'parentId' => $menuEntry['parent_id'],
+            'itemOrder' => $menuEntry['item_order'],
+            'name' => $menuEntry['name'],
+            'url' => $menuItemUrl,
+            'class' => $menuEntry['class'],
+            'classParent' => $menuEntry['class_parent'],
+            'dataAttributesString' => $dataAttributesString,
+            'target' => $menuEntry['target'],
+            'children' => null,
+        ];
+        $childMenuEntries = $menuEntry['children'] ?? null;
+        if($childMenuEntries){
+            $childMenuItems = [];
+            foreach ($childMenuEntries as $childMeniEntry) {
+                $childMenuItems[] = $this->prepareMenuItem($childMeniEntry);
+            }
+            $result['children'] = $childMenuItems;
+        }
+
+        return $result;
+
+    }
+
+    private function getMenuItemUrl($customUrl, $entryId)
+    {
+        $menuItemUrl = null;
+        if ($customUrl) {
+            $menuItemUrl = $this->replaceEnvironmentVariables($customUrl);
+        } elseif($entryId) {
+            $entry = Entry::find()->id($entryId)->one();
+            if (!empty($entry)){
+                $menuItemUrl = $entry->url;
+            } else {
+                $entry = Category::find()->id($entryId)->one();
+                if (!empty($entry)){
+                    $menuItemUrl = $entry->url;
+                }
+            }
+        }
+        return $menuItemUrl;
     }
 
     private function replaceEnvironmentVariables($str) {
