@@ -278,12 +278,10 @@ class OlivemenusService extends Component
         }
 
         $isActive = false;
-        $currentActiveUrl = Craft::$app->request->getUrl();
+        $currentActiveUrl = Craft::$app->request->getHostInfo() . Craft::$app->request->getUrl();
         if ($currentActiveUrl && $menuItemUrl) {
             $menuItemUrlFiltered = preg_replace('#^https?://#', '', $menuItemUrl);
-            $serverName = Craft::$app->request->getServerName();
-            $menuItemUrlFiltered = str_replace($serverName, '', $menuItemUrlFiltered);
-            $currentActiveUrl = preg_replace('/\?.*/', '', $currentActiveUrl); // Remove query string
+            $currentActiveUrl = preg_replace('#^https?://#', '', $currentActiveUrl); // Remove query string
             if ($currentActiveUrl === $menuItemUrlFiltered) {
                 $isActive = true;
             }
